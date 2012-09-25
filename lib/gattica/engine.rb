@@ -2,7 +2,7 @@ module Gattica
   class Engine
 
     attr_reader :user
-    attr_accessor :profile_id, :token, :user_accounts
+    attr_accessor :profile_id, :token, :user_accounts, :access_token
 
     # Initialize Gattica using username/password or token.
     #
@@ -16,12 +16,13 @@ module Gattica
     # +:profile_id+::   Use this Google Analytics profile_id (default is nil)
     # +:timeout+::      Set Net:HTTP timeout in seconds (default is 300)
     # +:token+::        Use an authentication token you received before
+    # +:access_token+:: Use an oauth access_token or refresh_token
     # +:verify_ssl+::   Verify SSL connection (default is true)
     def initialize(options={})
       @options = Settings::DEFAULT_OPTIONS.merge(options)
       handle_init_options(@options)
       create_http_connection('www.google.com')
-      check_init_auth_requirements()
+      check_init_auth_requirements
     end
 
     # Returns the list of accounts the user has access to. A user may have
@@ -133,12 +134,14 @@ module Gattica
     # error back from Google Analytics telling you so.
 
     def get(args={})
-      args = validate_and_clean(Settings::DEFAULT_ARGS.merge(args))
+      args         = validate_and_clean(Settings::DEFAULT_ARGS.merge(args))
       query_string = build_query_string(args,@profile_id)
+      
       @logger.debug(query_string) if @debug
       create_http_connection('www.googleapis.com')
+      
       data = do_http_get("/analytics/v2.4/data?#{query_string}")
-      return DataSet.new(Hpricot.XML(data))
+      DataSet.new(Hpricot.XML(data))
     end
 
 
@@ -151,6 +154,10 @@ module Gattica
       set_http_headers
     end
 
+    def access_token=(access_token)
+      @access_token = access_token
+      set_http_headers
+    end
     ######################################################################
     private
 
@@ -179,8 +186,12 @@ module Gattica
     # Sets up the HTTP headers that Google expects (this is called any time @token is set either by Gattica
     # or manually by the user since the header must include the token)
     def set_http_headers
-      @headers['Authorization'] = "GoogleLogin auth=#{@token}"
-      @headers['GData-Version']= '2'
+      if @access_token
+        @headers['Authorization'] = "Bearer #{@access_token}"
+      else
+        @headers['Authorization'] = "GoogleLogin auth=#{@token}"
+        @headers['GData-Version']= '2'
+      end
     end
 
 
@@ -261,36 +272,37 @@ module Gattica
     end
 
     def create_http_connection(server)
-      port = Settings::USE_SSL ? Settings::SSL_PORT : Settings::NON_SSL_PORT
-      @http = Net::HTTP.new(server, port)
-      @http.use_ssl = Settings::USE_SSL
-      @http.verify_mode = @options[:verify_ssl] ? Settings::VERIFY_SSL_MODE : Settings::NO_VERIFY_SSL_MODE
+      port               = Settings::USE_SSL ? Settings::SSL_PORT : Settings::NON_SSL_PORT
+      @http              = Net::HTTP.new(server, port)
+      @http.use_ssl      = Settings::USE_SSL
+      @http.verify_mode  = @options[:verify_ssl] ? Settings::VERIFY_SSL_MODE : Settings::NO_VERIFY_SSL_MODE
       @http.set_debug_output $stdout if @options[:debug]
       @http.read_timeout = @options[:timeout] if @options[:timeout]
     end
 
     # Sets instance variables from options given during initialization and
     def handle_init_options(options)
-      @logger = options[:logger]
-      @profile_id = options[:profile_id]
-      @user_accounts = nil # filled in later if the user ever calls Gattica::Engine#accounts
-      @user_segments = nil
-      @headers = { }.merge(options[:headers]) # headers used for any HTTP requests (Google requires a special 'Authorization' header which is set any time @token is set)
+      @logger               = options[:logger]
+      @profile_id           = options[:profile_id]
+      @user_accounts        = nil # filled in later if the user ever calls Gattica::Engine#accounts
+      @user_segments        = nil
+      @headers              = { }.merge(options[:headers]) # headers used for any HTTP requests (Google requires a special 'Authorization' header which is set any time @token is set)
       @default_account_feed = nil
-
     end
 
     # If the authorization is a email and password then create User objects
     # or if it's a previous token, use that.  Else, raise exception.
     def check_init_auth_requirements
-      if @options[:token].to_s.length > 200
+      if @options[:access_token]
+        self.access_token = @options[:access_token]
+      elsif @options[:token].to_s.length > 200
         self.token = @options[:token]
       elsif @options[:email] && @options[:password]
         @user = User.new(@options[:email], @options[:password])
         @auth = Auth.new(@http, user)
         self.token = @auth.tokens[:auth]
       else
-        raise GatticaError::NoLoginOrToken, 'An email and password or an authentication token is required to initialize Gattica.'
+        raise GatticaError::NoLoginOrToken, 'An email and password, authentication token, or access_token is required to initialize Gattica.'
       end
     end
 

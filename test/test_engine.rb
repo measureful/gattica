@@ -18,7 +18,7 @@ class TestEngine < Test::Unit::TestCase
   def test_accounts
     ga = Gattica.new(GatticaTest::DEFAULT_AUTH)
     accounts = ga.accounts
-    assert accounts.count > 900, "should have gotten at least 900 accounts"
+    assert accounts.count > 2, "should have gotten at least 2 accounts"
   end
 
 #  def test_timeout_too_short
