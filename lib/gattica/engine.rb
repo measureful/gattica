@@ -48,11 +48,7 @@ module Gattica
         create_http_connection('www.googleapis.com')
 
         # get profiles
-        response = do_http_get("/analytics/v2.4/management/accounts/~all/webproperties/~all/profiles?max-results=10000")
-        xml = Hpricot(response)
-        @user_accounts = xml.search(:entry).collect { |profile_xml| 
-          Account.new(profile_xml) 
-        }
+        profiles
 
         # Fill in the goals
         response = do_http_get("/analytics/v2.4/management/accounts/~all/webproperties/~all/profiles/~all/goals?max-results=10000")
@@ -67,6 +63,28 @@ module Gattica
         @user_accounts.each do |ua|
           xml.search(:entry).each { |e| ua.set_account_name(e) }
         end
+
+      end
+      @user_accounts
+    end
+
+    # Returns the list of profiles the user has access to. A user may have
+    # multiple accounts on Google Analytics and each account may have multiple
+    # profiles.
+    #   ga = Gattica.new({:email => 'johndoe@google.com', :password => 'password'})
+    #   ga.profiles
+    # See Gattica::Engine#get to see how to get some data.
+
+    def profiles
+      if @user_accounts.nil?
+        create_http_connection('www.googleapis.com')
+
+        # get profiles
+        response = do_http_get("/analytics/v2.4/management/accounts/~all/webproperties/~all/profiles?max-results=10000")
+        xml = Hpricot(response)
+        @user_accounts = xml.search(:entry).collect { |profile_xml|
+          Account.new(profile_xml)
+        }
 
       end
       @user_accounts
@@ -91,8 +109,8 @@ module Gattica
         create_http_connection('www.googleapis.com')
         response = do_http_get("/analytics/v2.4/management/segments?max-results=10000")
         xml = Hpricot(response)
-        @user_segments = xml.search("dxp:segment").collect { |s| 
-          Segment.new(s) 
+        @user_segments = xml.search("dxp:segment").collect { |s|
+          Segment.new(s)
         }
       end
       return @user_segments
@@ -136,10 +154,10 @@ module Gattica
     def get(args={})
       args         = validate_and_clean(Settings::DEFAULT_ARGS.merge(args))
       query_string = build_query_string(args,@profile_id)
-      
+
       @logger.debug(query_string) if @debug
       create_http_connection('www.googleapis.com')
-      
+
       data = do_http_get("/analytics/v2.4/data?#{query_string}")
       DataSet.new(Hpricot.XML(data))
     end
