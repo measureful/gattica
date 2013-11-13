@@ -90,6 +90,25 @@ module Gattica
       @user_accounts
     end
 
+    def goals account_id, web_property_id, identifier, profile_id
+
+      create_http_connection('www.googleapis.com')
+
+      response = do_http_get("/analytics/v2.4/management/accounts/#{account_id}/webproperties/#{web_property_id}/profiles/#{profile_id}/goals?max-results=10000")
+      xml = Hpricot(response)
+
+      goals = []
+      xml.search('ga:goal').each do |goal|
+        goals.push({
+          :active => goal.attributes['active'],
+          :name => goal.attributes['name'],
+          :number => goal.attributes['number'].to_i,
+          :value => goal.attributes['value'].to_f
+        })
+      end
+      goals
+    end
+
     # Returns the list of segments available to the authenticated user.
     #
     # == Usage
