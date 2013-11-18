@@ -269,7 +269,7 @@ module Gattica
           else
             raise GatticaError::InvalidFilter, "The filter '#{filter}' is invalid. Filters should look like 'browser == Firefox' or 'browser==Firefox'"
           end
-        end.join(';')
+        end.join(',')
       end
       return output
     end
