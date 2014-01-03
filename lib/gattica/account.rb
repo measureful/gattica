@@ -14,6 +14,7 @@ module Gattica
       @table_id = xpath_value(xml, "dxp:property[@name='dxp:tableId']")
       @profile_id = find_profile_id(xml)
       @web_property_id = xpath_value(xml, "dxp:property[@name='ga:webPropertyId']")
+      @currency = xpath_value(xml, "dxp:property[@name='ga:currency']")
       @goals = []
     end
 
