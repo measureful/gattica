@@ -6,15 +6,16 @@ module Gattica
                 :profile_id, :web_property_id, :goals
   
     def initialize(xml)
-      @id = xml.at("link[@rel='self']").attributes['href']
-      @updated = DateTime.parse(xml.at(:updated).inner_html)
-      @account_id = find_account_id(xml)
-
-      @title = xpath_value(xml, "dxp:property[@name='ga:profileName']")
-      @table_id = xpath_value(xml, "dxp:property[@name='dxp:tableId']")
-      @profile_id = find_profile_id(xml)
+      @id              = xml.at("link[@rel='self']").attributes['href']
+      @updated         = DateTime.parse(xml.at(:updated).inner_html)
+      @account_id      = find_account_id(xml)
+      
+      @title           = xpath_value(xml, "dxp:property[@name='ga:profileName']")
+      @table_id        = xpath_value(xml, "dxp:property[@name='dxp:tableId']")
+      @profile_id      = find_profile_id(xml)
       @web_property_id = xpath_value(xml, "dxp:property[@name='ga:webPropertyId']")
-      @currency = xpath_value(xml, "dxp:property[@name='ga:currency']")
+      @currency        = xpath_value(xml, "dxp:property[@name='ga:currency']")
+      @time_zone       = xpath_value(xml, "dxp:property[@name='ga:timezone']")
       @goals = []
     end
 
