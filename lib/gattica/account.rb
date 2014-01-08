@@ -3,7 +3,7 @@ module Gattica
     include Convertible
     
     attr_reader :id, :updated, :title, :table_id, :account_id, :account_name,
-                :profile_id, :web_property_id, :goals
+                :profile_id, :web_property_id, :goals, :currency, :time_zone
   
     def initialize(xml)
       @id              = xml.at("link[@rel='self']").attributes['href']
