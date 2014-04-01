@@ -79,13 +79,20 @@ module Gattica
       if @user_accounts.nil?
         create_http_connection('www.googleapis.com')
 
-        # get profiles
-        response = do_http_get("/analytics/v2.4/management/accounts/~all/webproperties/~all/profiles?max-results=10000")
-        xml = Hpricot(response)
-        @user_accounts = xml.search(:entry).collect { |profile_xml|
-          Account.new(profile_xml)
-        }
+        @user_accounts = []
+        start_index    = 1
+        max_results    = 1000
 
+        loop do
+          response = do_http_get("/analytics/v2.4/management/accounts/~all/webproperties/~all/profiles?max-results=#{max_results}&start-index=#{start_index}")
+          xml = Hpricot(response)
+          profiles = xml.search(:entry).collect { |profile_xml|
+            Account.new(profile_xml)
+          }
+          @user_accounts.concat profiles
+          start_index += max_results
+          break if profiles.length < max_results
+        end
       end
       @user_accounts
     end
